@@ -1,0 +1,46 @@
+{
+  "name": "openchamber-encrypted-sync",
+  "version": "0.2.7",
+  "private": true,
+  "type": "module",
+  "description": "加密同步：多设备之间增量同步 OpenChamber 的会话、设置与扩展，内容端到端加密，支持文件夹 / WebDAV / S3 / GitHub 私有仓库。",
+  "engines": {
+    "node": ">=22"
+  },
+  "openchamber": {
+    "apiVersion": 1,
+    "engines": {
+      "openchamber": ">=2.7.0"
+    },
+    "contributes": {
+      "panel": {
+        "id": "encrypted-sync",
+        "name": "加密同步",
+        "icon": "cloud-line",
+        "entry": "panel/index.html"
+      },
+      "statusSection": {
+        "entry": "status/index.html",
+        "title": "加密同步",
+        "height": 100,
+        "defaultExpanded": false
+      },
+      "service": {
+        "entry": "service/main.mjs",
+        "runtime": "host",
+        "keepRunning": true,
+        "permissions": {
+          "exec": [
+            "opencode",
+            "powershell"
+          ]
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "package": "node scripts/package.mjs"
+  }
+}

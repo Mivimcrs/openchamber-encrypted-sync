@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>加密同步</title>
+    <style>
+      :root { color-scheme: light dark; --s-fg: var(--oc-fg, #111); --s-muted: var(--oc-muted, #6b7280); --s-bad: var(--oc-error, #dc2626); --s-ok: var(--oc-success, #15803d); --s-warn: var(--oc-warning, #b45309); --s-font: var(--oc-font, system-ui, sans-serif); }
+      html, body { margin: 0; }
+      body { font-family: var(--s-font); font-size: 12px; color: var(--s-fg); background: transparent; }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --s-fg: var(--oc-fg, #e6e6e6);
+          --s-muted: var(--oc-muted, #9ca3af);
+          --s-bad: var(--oc-error, #f87171);
+          --s-ok: var(--oc-success, #4ade80);
+          --s-warn: var(--oc-warning, #fbbf24);
+        }
+      }
+      #root { padding: 2px 2px 6px; display: flex; flex-direction: column; gap: 4px; }
+      .line { display: flex; gap: 6px; align-items: center; }
+      .line strong { font-weight: 600; }
+      .muted { color: var(--s-muted); }
+      .ok { color: var(--s-ok); }
+      .bad { color: var(--s-bad); }
+      .warn { color: var(--s-warn); }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--s-muted); flex: none; }
+      .dot.ok { background: var(--s-ok); }
+      .dot.bad { background: var(--s-bad); }
+      .dot.warn { background: var(--s-warn); }
+    </style>
+  </head>
+  <body>
+    <div id="root"><div class="muted">正在读取同步状态…</div></div>
+    <script src="./main.js"></script>
+  </body>
+</html>

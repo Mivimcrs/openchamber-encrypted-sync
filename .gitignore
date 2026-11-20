@@ -1,0 +1,15 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 打包与运行产物
+*.zip
+*.log
+downloads.json
+backups/
+zips/
+cache/
+
+# 系统噪声
+.DS_Store
+Thumbs.db

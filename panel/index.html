@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>加密同步</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --s-bg: var(--oc-bg, transparent);
+        --s-fg: var(--oc-fg, #111111);
+        --s-muted: var(--oc-muted, #6b7280);
+        --s-border: var(--oc-border, #e5e7eb);
+        --s-subtle: var(--oc-subtle, #f9fafb);
+        --s-primary: var(--oc-primary, #2563eb);
+        --s-primary-fg: var(--oc-primary-fg, #ffffff);
+        --s-danger: var(--oc-error, #dc2626);
+        --s-warn: var(--oc-warning, #b45309);
+        --s-ok: var(--oc-success, #15803d);
+        --s-radius: var(--oc-radius, 8px);
+        --s-font: var(--oc-font, system-ui, -apple-system, "Segoe UI", sans-serif);
+        --s-mono: var(--oc-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+      }
+      html, body { margin: 0; }
+      body { font-family: var(--s-font); font-size: 12.5px; line-height: 1.5; color: var(--s-fg); background: transparent; }
+      /* 宿主主题到达前，跟随系统深浅色，避免夜间出现深字浅底/浅字深底 */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --s-fg: var(--oc-fg, #e6e6e6);
+          --s-muted: var(--oc-muted, #9ca3af);
+          --s-border: var(--oc-border, #3f3f46);
+          --s-subtle: var(--oc-subtle, #1f1f23);
+          --s-primary: var(--oc-primary, #60a5fa);
+          --s-primary-fg: var(--oc-primary-fg, #0b1220);
+          --s-danger: var(--oc-error, #f87171);
+          --s-warn: var(--oc-warning, #fbbf24);
+          --s-ok: var(--oc-success, #4ade80);
+        }
+      }
+      #root { padding: 10px 10px 16px; display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+      section { border: 1px solid var(--s-border); border-radius: var(--s-radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+      h2 { margin: 0; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--s-muted); font-weight: 600; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .row.between { justify-content: space-between; }
+      .grow { flex: 1; min-width: 0; }
+      label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+      label.inline { flex-direction: row; align-items: center; gap: 6px; }
+      input[type="text"], input[type="password"], input[type="number"], select, textarea {
+        font: inherit; color: inherit; background: var(--s-subtle);
+        border: 1px solid var(--s-border); border-radius: calc(var(--s-radius) - 2px); padding: 6px 8px; width: 100%; box-sizing: border-box;
+      }
+      input::placeholder, textarea::placeholder { color: var(--s-muted); opacity: 0.8; }
+      option { color: var(--s-fg); background: var(--s-subtle); }
+      textarea { font-family: var(--s-mono); font-size: 11.5px; min-height: 54px; resize: vertical; }
+      input:focus, select:focus, textarea:focus { outline: 2px solid var(--s-primary); outline-offset: -1px; }
+      button { font: inherit; cursor: pointer; border-radius: calc(var(--s-radius) - 2px); border: 1px solid var(--s-border); background: transparent; color: var(--s-fg); padding: 6px 12px; }
+      button:hover { border-color: var(--s-muted); }
+      button.primary { background: var(--s-primary); border-color: var(--s-primary); color: var(--s-primary-fg); }
+      button.primary:hover { filter: brightness(1.06); }
+      button.danger { color: var(--s-danger); border-color: var(--s-danger); }
+      button:disabled { opacity: 0.5; cursor: default; }
+      button.small { padding: 2px 8px; font-size: 11.5px; }
+      .badge { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 999px; font-size: 11px; border: 1px solid var(--s-border); color: var(--s-muted); }
+      .badge.ok { color: var(--s-ok); border-color: var(--s-ok); }
+      .badge.warn { color: var(--s-warn); border-color: var(--s-warn); }
+      .badge.bad { color: var(--s-danger); border-color: var(--s-danger); }
+      .muted { color: var(--s-muted); }
+      .mono { font-family: var(--s-mono); font-size: 11.5px; }
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+      .stat { border: 1px solid var(--s-border); border-radius: calc(var(--s-radius) - 2px); padding: 6px 8px; }
+      .stat .k { font-size: 10.5px; color: var(--s-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+      .stat .v { font-size: 14px; font-variant-numeric: tabular-nums; }
+      ul.items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; }
+      li.item { border: 1px solid var(--s-border); border-radius: calc(var(--s-radius) - 2px); padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+      li.item .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      li.item.skipped { opacity: .5; }
+      li.group { color: var(--s-muted); font-size: 11px; letter-spacing: .08em; padding: 4px 2px 0; }
+      #diffList button.small[aria-pressed="true"] { background: var(--s-primary); color: var(--s-primary-fg); border-color: var(--s-primary); }
+      .name { font-weight: 600; word-break: break-word; }
+      .empty { color: var(--s-muted); padding: 6px 0; }
+      .hidden { display: none !important; }
+      .warnbox { border: 1px solid var(--s-warn); color: var(--s-warn); border-radius: calc(var(--s-radius) - 2px); padding: 6px 8px; }
+      .errorbox { border: 1px solid var(--s-danger); color: var(--s-danger); border-radius: calc(var(--s-radius) - 2px); padding: 6px 8px; }
+      .okbox { border: 1px solid var(--s-ok); color: var(--s-ok); border-radius: calc(var(--s-radius) - 2px); padding: 6px 8px; }
+      .seg { display: inline-flex; border: 1px solid var(--s-border); border-radius: calc(var(--s-radius) - 2px); overflow: hidden; }
+      .seg button { border: 0; border-radius: 0; padding: 5px 10px; }
+      .seg button[aria-pressed="true"] { background: var(--s-primary); color: var(--s-primary-fg); }
+      details { border-top: 1px solid var(--s-border); padding-top: 8px; }
+      summary { cursor: pointer; color: var(--s-muted); font-size: 12px; }
+      .checkline { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 12px; }
+      .hint { font-size: 11px; color: var(--s-muted); }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <section id="head">
+        <div class="row between">
+          <h2 style="margin:0">异地加密同步</h2>
+          <span id="statusBadge" class="badge">正在读取</span>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div id="alert" class="hidden"></div>
+        <div class="row">
+          <button id="syncNow" class="primary">立即同步</button>
+          <button id="previewBtn">检查差异</button>
+          <button id="lockBtn" class="small">锁定</button>
+          <span class="grow"></span>
+          <span id="device" class="hint mono"></span>
+        </div>
+      </section>
+
+      <section id="setupSection" class="hidden">
+        <h2>首次配置</h2>
+        <div id="unlockBlock" class="hidden">
+          <div class="row">
+            <label class="grow">恢复口令
+              <input id="unlockPassword" type="password" autocomplete="current-password" placeholder="输入其他设备使用的恢复口令" />
+            </label>
+            <button id="unlockBtn" class="primary">解锁</button>
+          </div>
+          <div class="hint">同一存储目录下已有同步库时，用原口令解锁即可加入，不会重建。</div>
+          <div class="row" style="margin-top:6px"><button id="joinBtn" class="primary">以云端为准加入本机</button><span class="hint">已有云端数据时，用它覆盖本机同名配置</span></div>
+        </div>
+        <div id="setupBlock">
+          <label>存储方式
+            <select id="storageType">
+              <option value="folder">本地文件夹 / 网盘同步目录（默认）</option>
+              <option value="s3">S3 兼容对象存储</option>
+              <option value="webdav">WebDAV</option>
+              <option value="github">GitHub 私有仓库</option>
+            </select>
+          </label>
+          <div id="storageFolder" class="storageBox">
+            <label>同步文件夹绝对路径
+              <input id="folderPath" type="text" placeholder="例如 D:\Sync\OpenChamber" />
+            </label>
+            <div class="hint">可指向坚果云、OneDrive、Syncthing 或 NAS 的同步目录；异地传输由该客户端负责。</div>
+          </div>
+          <div id="storageS3" class="storageBox hidden">
+            <label>Endpoint（HTTPS）<input id="s3Endpoint" placeholder="https://s3.example.com" /></label>
+            <div class="row">
+              <label class="grow">Bucket<input id="s3Bucket" /></label>
+              <label class="grow">Region<input id="s3Region" placeholder="us-east-1" /></label>
+            </div>
+            <div class="row">
+              <label class="grow">Access Key<input id="s3Access" autocomplete="off" /></label>
+              <label class="grow">Secret Key<input id="s3Secret" type="password" autocomplete="off" /></label>
+            </div>
+            <div class="hint">密钥只在本机加密保存，不会进入同步数据。</div>
+          </div>
+          <div id="storageWebdav" class="storageBox hidden">
+            <label>WebDAV 地址（HTTPS）<input id="davUrl" placeholder="https://dav.example.com/remote.php/dav/files/me/sync" /></label>
+            <div class="row">
+              <label class="grow">用户名<input id="davUser" autocomplete="off" /></label>
+              <label class="grow">密码<input id="davPass" type="password" autocomplete="off" /></label>
+            </div>
+          </div>
+          <div id="storageGithub" class="storageBox hidden">
+            <div class="row">
+              <label class="grow">私有仓库<input id="ghRepo" placeholder="owner/repo" /></label>
+              <label class="grow">分支<input id="ghBranch" placeholder="main" /></label>
+            </div>
+            <label>Fine-grained Token（Contents: Read and write）<input id="ghToken" type="password" autocomplete="off" /></label>
+            <div class="hint">聊天记录长期增长会迅速放大仓库，仅建议同步设置与小型配置。</div>
+          </div>
+          <label>恢复口令（至少 12 个字符，遗失无法找回）
+            <input id="password" type="password" autocomplete="new-password" />
+          </label>
+          <div class="row">
+            <label class="inline"><input id="rememberKey" type="checkbox" checked /> 在本机记住密钥以便自动同步</label>
+          </div>
+        </div>
+        <div class="row">
+          <button id="setupBtn" class="primary">保存并连接</button>
+          <button id="testBtn">测试存储</button>
+        </div>
+      </section>
+
+      <section id="selectionSection">
+        <h2>同步内容</h2>
+        <div class="checkline">
+          <label class="inline"><input id="selSessions" type="checkbox" /> 聊天会话记录</label>
+          <label class="inline"><input id="selSettings" type="checkbox" /> 软件设置</label>
+          <label class="inline"><input id="selExtensions" type="checkbox" /> OpenChamber 扩展</label>
+          <label class="inline"><input id="selProviders" type="checkbox" /> 服务商与 API 凭据</label>
+        </div>
+        <div class="hint">OpenCode 插件随“软件设置”一起同步（插件注册、技能、命令与插件开关）。聊天中的图片附件与项目源码不在同步范围。</div>
+        <label>目录映射（每行 <span class="mono">原路径=&gt;新路径</span>，用于另一台机器上恢复会话）
+          <textarea id="mapDirs" placeholder="D:\Projects\A=>E:\Work\A"></textarea>
+        </label>
+        <label>未知目录的会话恢复位置
+          <input id="fallbackDir" type="text" placeholder="例如 C:\Users\你\.config\openchamber\chats" />
+        </label>
+        <div class="row">
+          <button id="saveSelection" class="small">保存内容设置</button>
+          <span id="sessionCount" class="hint"></span>
+        </div>
+      </section>
+
+      <section id="autoSection">
+        <h2>自动同步</h2>
+        <div class="row">
+          <label class="inline"><input id="autoEnabled" type="checkbox" /> 启用自动同步</label>
+          <label class="inline"><input id="autoDelete" type="checkbox" /> 自动接受远端删除（不推荐）</label>
+          <label class="inline"><input id="archiveImported" type="checkbox" checked /> 其他设备的新会话放入归档</label>
+        </div>
+        <div class="row">
+          <label class="grow">本机修改后等待（秒）<input id="idleSec" type="number" min="15" max="3600" /></label>
+          <label class="grow">软件启动后等待（秒）<input id="startupSec" type="number" min="5" max="3600" /></label>
+        </div>
+        <div class="hint">删除动作默认只在“检查差异”中提示，不自动执行；会话冲突会自动按消息并集合并。</div>
+        <div class="row"><button id="saveAuto" class="small">保存自动同步</button></div>
+      </section>
+
+      <section id="diffSection" class="hidden">
+        <div class="row between">
+          <h2 style="margin:0">差异与冲突</h2>
+          <span id="diffCounts" class="hint"></span>
+        </div>
+        <div id="diffIntro" class="hint"></div>
+        <ul id="diffList" class="items"></ul>
+        <div class="row">
+          <button id="applySync" class="primary">应用所选并同步</button>
+          <button id="refreshDiff" class="small">重新检查</button>
+          <button id="doctorBtn" class="small">自检修复</button>
+          <button id="packBtn" class="small">备份扩展 zip</button>
+        </div>
+      </section>
+
+      <details>
+        <summary>同步状态详情</summary>
+        <div id="details" class="mono" style="white-space:pre-wrap; margin-top:6px;"></div>
+      </details>
+    </div>
+    <script src="./main.js"></script>
+  </body>
+</html>

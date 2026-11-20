@@ -1,0 +1,58 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 版本号与 tag 必须一致
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          test "v${VERSION}" = "$GITHUB_REF_NAME" || {
+            echo "package.json 是 ${VERSION}，tag 是 ${GITHUB_REF_NAME}"; exit 1;
+          }
+
+      - name: 自检
+        run: npm run check
+
+      - name: 单元测试
+        run: npm test
+
+      - name: 打包
+        run: |
+          set -euo pipefail
+          npm run package
+          ZIP="$(ls dist/*.zip)"
+          unzip -l "$ZIP" | head -30
+          echo "VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-sync-${{ env.VERSION }}
+          path: ${{ env.ZIP }}
+          if-no-files-found: error
+
+      - name: 发布 Release（仅 tag 触发）
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ZIP" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
