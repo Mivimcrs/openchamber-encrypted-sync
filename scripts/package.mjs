@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { deflateRawSync, crc32 as zlibCrc32 } from 'node:zlib';
+import * as zlib from 'node:zlib';
 import { readdir, readFile, stat, writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -7,6 +7,8 @@ import path from 'node:path';
 // 仓库根目录就是扩展包本身，所以只打包「宿主需要的东西」。
 // 与 .github/workflows/release.yml 用同一份排除规则，避免本地与 CI 产物不一致。
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const deflateRawSync = zlib.deflateRawSync;
+const zlibCrc32 = typeof zlib.crc32 === 'function' ? zlib.crc32 : null;
 const EXCLUDE_DIRS = new Set(['.git', '.github', 'node_modules', 'dist', 'tmp', '.data', '__pycache__']);
 const EXCLUDE_FILES = new Set(['.gitignore', '.gitattributes', 'CHANGELOG.md', 'LICENSE', '踩坑日志.md']);
 const EXCLUDE_SUFFIX = ['.zip', '.log', '.DS_Store', 'Thumbs.db'];
